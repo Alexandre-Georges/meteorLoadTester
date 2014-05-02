@@ -1,8 +1,9 @@
 # Load tester for Meteor
 
-Meteor uses websockets via [SockJS](https://github.com/sockjs) and the purpose of this project is to simulate websocket requests.
+Meteor is a HTTP server and a websocket server too. It handles websockets via [SockJS](https://github.com/sockjs).
+The purpose of this project is to simulate users with HTTP and websocket requests.
 
-This project can be used to call Meteor methods and to subscribe and retrieve Meteor collections. A scenario (set of subscription and method calls) can be defined in the configuration file ```javascript utils/config.js```
+This project can be used to call Meteor methods and to subscribe and retrieve Meteor collections. A scenario (set of subscription and method calls) can be defined in the configuration file ```utils/config.js```
 
 ## Important
 In the configuration or in the results, all times and dates (timestamps) are in milliseconds.
@@ -15,7 +16,9 @@ This phenomenon should also be visible if there are a huge number of calls, call
 ## Scenario configuration
  In utils/config.js multiple properties can be defined, let's take a quick look to them :
 
-* config.url : URL of your server, if you use Meteor defaults you do not need to change it
+* config.serverUrl : URL of your server, if you use Meteor defaults you do not need to change it
+* config.httpUrl : you may want to use a specific URL to reach your server
+* config.ddpUrl : URL used for websocket requests
 * config.timeout : we wait for a server response during this time, once the timeout is reached we flag the call as timeout
 * config.ddpVersion : Meteor uses a custom 'protocol' called DDP, the version sometimes changes
 * config.resultsDirectory : where result files should be stored
@@ -24,14 +27,14 @@ This phenomenon should also be visible if there are a huge number of calls, call
 
 Subscriptions and methods have sub-properties to create a scenario :
 
-    * name : name of the subscription or method
-    * parameters : optional parameters (null if none)
-    * callNumber : number of calls to perform
-    * delayBetweenCalls : delay between each call
-    * startDelay : when the 1st call should start
+* name : name of the subscription or method
+* parameters : optional parameters (null if none)
+* callNumber : number of calls to perform
+* delayBetweenCalls : delay between each call
+* startDelay : when the 1st call should start
 
 ## Processes configuration
-The script loadTest.sh can be parametrized to launch multiple users using the property : ```shell USER_NUMBER```
+The script loadTest.sh can be parametrized to launch multiple users using the property : ```USER_NUMBER```
 
 ## Process description
 The process follows the following steps :
@@ -42,8 +45,8 @@ The process follows the following steps :
 * when all are finished, it reads results of each process, gathers all information and generate a summary
 
 ## Setup
-This project requires some libraries (underscore and uuid), to import them run the command : ```shell npm install```
+This project requires some libraries (underscore and uuid), to import them run the command : ```npm install```
 Dependencies are defined in packages.json.
 
 ## Launch
-Launch the load tester with the following command : ```shell ./loadTest.sh```
+Launch the load tester with the following command : ```./loadTest.sh```
