@@ -145,7 +145,7 @@ ResponseChecker.prototype.isRequestsFinished = function(type) {
     return finished;
 };
 ResponseChecker.prototype.isAllFinished = function() {
-    return this.isConnectionFinished() && this.isRequestsFinished(ResponseChecker.SUBSCRIPTION) && this.isRequestsFinished(ResponseChecker.METHOD);
+    return this.isConnectionFinished() && this.isRequestsFinished(ResponseChecker.HTTP) && this.isRequestsFinished(ResponseChecker.SUBSCRIPTION) && this.isRequestsFinished(ResponseChecker.METHOD);
 };
 
 ResponseChecker.prototype.display = function() {
