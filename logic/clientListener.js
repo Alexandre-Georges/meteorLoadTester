@@ -4,41 +4,78 @@ var SockJS = require('../frameworks/sockjs-client');
 var ResponseChecker = require('../logic/response-checker');
 var Config = require('../utils/config');
 var DDPClient = require('../utils/ddp-client');
+var HttpClient = require('../utils/http-client');
 
 var ClientListener = function() {
+
+    var isHttp = Config.httpUrl !== null;
+
     var self = this;
-    this.responseChecker = new ResponseChecker();
-    this.client = SockJS.create(Config.url);
-    this.client.on('connection', function() {
-        ClientListener.connectionFunction(self);
+    this.responseChecker = new ResponseChecker(isHttp);
+
+    if (isHttp === true) {
+        ClientListener.httpPrepareCall(self, Config.httpUrl);
+    }
+
+    this.responseChecker.start();
+    this.ddpClient = SockJS.create(Config.ddpUrl);
+    this.ddpClient.on('connection', function() {
+        ClientListener.ddpConnectionFunction(self);
     });
-    this.client.on('data', function(message) {
-        ClientListener.dataFunction(self, message);
+    this.ddpClient.on('data', function(message) {
+        ClientListener.ddpDataFunction(self, message);
     });
-    this.client.on('error', ClientListener.errorFunction);
+    this.ddpClient.on('error', ClientListener.ddpErrorFunction);
+
 };
 
-ClientListener.prototype.client = null;
+ClientListener.prototype.ddpClient = null;
 ClientListener.prototype.responseChecker = null;
 
-ClientListener.connectionFunction = function (self) {
 
-    self.responseChecker.start();
-    DDPClient.connect(self.client);
+ClientListener.httpPrepareCall = function (self, url) {
 
-    ClientListener.prepareCall(self, function(name, id) {
+    self.responseChecker.startCallHttp(url, function () {
+        ClientListener.endProcess(self);
+    });
+
+    HttpClient.get(url, function(content, error) {
+        self.responseChecker.endCallHttp(url, error);
+
+        var pageUrls = HttpClient.extractSrcs(content);
+        _.forEach(pageUrls, function(pageUrl) {
+            var fullUrl = Config.serverUrl + pageUrl;
+            self.responseChecker.startCallHttp(fullUrl, function () {
+                ClientListener.endProcess(self);
+            });
+            HttpClient.get(fullUrl, function(content, error) {
+                self.responseChecker.endCallHttp(fullUrl, error);
+                ClientListener.endProcess(self);
+            });
+        });
+
+        ClientListener.endProcess(self);
+    });
+
+};
+
+ClientListener.ddpConnectionFunction = function (self) {
+
+    DDPClient.connect(self.ddpClient);
+
+    ClientListener.ddpPrepareCall(self, function(name, id) {
         self.responseChecker.startCallMethod(name, id, function () {
             ClientListener.endProcess(self);
         });
     }, DDPClient.callMethod, Config.methods);
-    ClientListener.prepareCall(self, function(name, id) {
+    ClientListener.ddpPrepareCall(self, function(name, id) {
         self.responseChecker.startCallSubscription(name, id, function () {
             ClientListener.endProcess(self);
         });
     }, DDPClient.subscribe, Config.subscriptions);
 };
 
-ClientListener.prepareCall = function (self, responseCheckerFunction, ddpClientFunction, calls) {
+ClientListener.ddpPrepareCall = function (self, responseCheckerFunction, ddpClientFunction, calls) {
     var totalIndex = 0;
     _.forEach(calls, function(call) {
         var currentIndex = 0;
@@ -47,7 +84,7 @@ ClientListener.prepareCall = function (self, responseCheckerFunction, ddpClientF
             setTimeout(function(index) {
                 var id = index.toString();
                 responseCheckerFunction(call.name, id);
-                ddpClientFunction(self.client, call.name, id, call.parameters);
+                ddpClientFunction(self.ddpClient, call.name, id, call.parameters);
             }, timeoutValue, totalIndex);
             totalIndex++;
             currentIndex++;
@@ -55,7 +92,7 @@ ClientListener.prepareCall = function (self, responseCheckerFunction, ddpClientF
     });
 };
 
-ClientListener.dataFunction = function (self, message) {
+ClientListener.ddpDataFunction = function (self, message) {
     //console.log(message);
     var response = JSON.parse(message);
     if (response.server_id !== undefined) {
@@ -92,13 +129,13 @@ ClientListener.dataFunction = function (self, message) {
     console.log('unknown message ' + message);
 };
 
-ClientListener.errorFunction = function (error) {
+ClientListener.ddpErrorFunction = function (error) {
     console.log('error' + JSON.stringify(error));
 };
 
 ClientListener.endProcess = function(self) {
     if (self.responseChecker.isAllFinished()) {
-        self.client.close();
+        self.ddpClient.close();
         self.responseChecker.end();
         self.responseChecker.display();
     }

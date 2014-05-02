@@ -3,8 +3,14 @@ var _ = require('underscore-node');
 var Config = require('../utils/config');
 var FileSystem = require('../utils/filesystem');
 
-ResponseChecker = function() {
+ResponseChecker = function(isHttp) {
 
+    var httpCalls = isHttp === true ? 1 : 0;
+
+    this.requests[ResponseChecker.HTTP] = {
+        number: httpCalls,
+        calls: []
+    };
     this.requests[ResponseChecker.SUBSCRIPTION] = {
         number: 0,
         calls: []
@@ -25,8 +31,9 @@ ResponseChecker = function() {
     });
 };
 
-ResponseChecker.SUBSCRIPTION = 0;
-ResponseChecker.METHOD = 1;
+ResponseChecker.HTTP = 0;
+ResponseChecker.SUBSCRIPTION = 1;
+ResponseChecker.METHOD = 2;
 
 ResponseChecker.getFinishingTime = function(startingDate) {
     return (new Date()).getTime() - startingDate.getTime();
@@ -64,6 +71,9 @@ ResponseChecker.prototype.prepareCalls = function(type, callNumber) {
     request.number += callNumber;
 };
 
+ResponseChecker.prototype.startCallHttp = function(id, endProcess) {
+    this.startCall(ResponseChecker.HTTP, '', id, endProcess);
+};
 ResponseChecker.prototype.startCallSubscription = function(name, id, endProcess) {
     this.startCall(ResponseChecker.SUBSCRIPTION, name, id, endProcess);
 };
@@ -91,6 +101,9 @@ ResponseChecker.prototype.startCall = function(type, name, id, endProcess) {
             endProcess();
         }
     }, Config.timeout);
+};
+ResponseChecker.prototype.endCallHttp = function(id, error) {
+    this.endCall(ResponseChecker.HTTP, id, error);
 };
 ResponseChecker.prototype.endCallSubscription = function(id, error) {
     this.endCall(ResponseChecker.SUBSCRIPTION, id, error);
@@ -137,12 +150,26 @@ ResponseChecker.prototype.isAllFinished = function() {
 
 ResponseChecker.prototype.display = function() {
 
+    var https = ResponseChecker.formatData(this.requests[ResponseChecker.HTTP]);
     var methods = ResponseChecker.formatData(this.requests[ResponseChecker.METHOD]);
     var subscriptions = ResponseChecker.formatData(this.requests[ResponseChecker.SUBSCRIPTION]);
 
     var string = '';
     string += 'agent;' + Config.clientNumber;
     string += '\ntotal time;' + this.executionTime;
+
+    for(var index in https) {
+        var httpResult = https[index];
+        string += '\nhttp;' + index + ';';
+        string += 'calls;' + httpResult.executions.length + ';';
+        string += 'errors;' + httpResult.errors + ';';
+        string += 'timeouts;' + httpResult.timeouts + ';';
+        string += 'mean;' + (httpResult.totalTime / httpResult.executions.length);
+        string += '\nstarting date;time;error;timeout';
+        _.forEach(httpResult.executions, function(execution) {
+            string += '\n' + execution.startingDate.getTime() + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
+        });
+    };
 
     for(var index in methods) {
         var methodResult = methods[index];

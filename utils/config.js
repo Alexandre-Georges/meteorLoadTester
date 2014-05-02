@@ -1,7 +1,9 @@
 var config = {};
 
-config.url = 'http://localhost:3000/sockjs';
-config.timeout = 100;
+config.serverUrl = 'http://localhost:3000';
+config.httpUrl = config.serverUrl + '/';
+config.ddpUrl = config.serverUrl + '/sockjs';
+config.timeout = 5000;
 config.ddpVersion = 'pre2';
 config.resultsDirectory = 'results';
 

@@ -1,7 +1,9 @@
 var _ = require('underscore-node');
+
+var Config = require('../utils/config');
 var FileSystem = require('../utils/filesystem');
 
-var fileNames = FileSystem.listFiles('results');
+var fileNames = FileSystem.listFiles(Config.resultsDirectory);
 var filesData = FileSystem.getFilesData(fileNames);
 var result = readAgentResults(filesData);
 
@@ -10,6 +12,7 @@ writeReport(result);
 function readAgentResults(filesData) {
     var result = {
         agents: [],
+        https: [],
         methods: [],
         subscriptions: []
     };
@@ -28,10 +31,14 @@ function readAgentResults(filesData) {
             var columns = lines[index].split(';');
 
             var regularLine = true;
+            var http = false;
             var method = false;
             var subscription = false;
 
-            if (columns[0] === 'method') {
+            if (columns[0] === 'http') {
+                http = true;
+                regularLine = false;
+            } else if (columns[0] === 'method') {
                 method = true;
                 regularLine = false;
             } else if (columns[0] === 'subscription') {
@@ -41,7 +48,9 @@ function readAgentResults(filesData) {
 
             if (regularLine === false) {
                 var name = columns[1];
-                if (method === true) {
+                if (http === true) {
+                    currentRequest = result.https[name];
+                } else if (method === true) {
                     currentRequest = result.methods[name];
                 } else if (subscription === true) {
                     currentRequest = result.subscriptions[name];
@@ -53,7 +62,9 @@ function readAgentResults(filesData) {
                         agentData: [],
                         executions: []
                     }
-                    if (method === true) {
+                    if (http === true) {
+                        result.https[name] = currentRequest;
+                    } else if (method === true) {
                         result.methods[name] = currentRequest;
                     } else if (subscription === true) {
                         result.subscriptions[name] = currentRequest;
@@ -95,6 +106,33 @@ function writeReport(result) {
         agentTotalTimeLine += ';' + agent.totalTime;
     });
     string += agentNumbersLine + '\n' + agentTotalTimeLine;
+
+    string += '\n\nhttp';
+    for (var index in result.https) {
+        var http = result.https[index];
+        string += '\nurl;' + index;
+
+        var agentNumbersLine = 'agent number';
+        var agentCallsLine = 'calls';
+        var agentErrorsLine = 'errors';
+        var agentTimeoutsLine = 'timeouts';
+        var agentMeansLine = 'mean times';
+
+        _.forEach(http.agentData, function(agent) {
+            agentNumbersLine += ';' + agent.number;
+            agentCallsLine += ';' + agent.calls;
+            agentErrorsLine += ';' + agent.errors;
+            agentTimeoutsLine += ';' + agent.timeouts;
+            agentMeansLine += ';' + agent.mean;
+        });
+        string += '\n' + agentNumbersLine + '\n' + agentCallsLine + '\n' + agentErrorsLine + '\n' + agentTimeoutsLine + '\n' + agentMeansLine;
+
+        string += '\nagent number;starting date;execution time;error;timeout';
+        http.executions = _.sortBy(http.executions, function(execution) { return execution.startingDate; });
+        _.forEach(http.executions, function(execution) {
+            string += '\n' + execution.agentNumber + ';' + execution.startingDate + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
+        });
+    }
 
     string += '\n\nmethods';
     for (var index in result.methods) {
