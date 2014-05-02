@@ -66,6 +66,9 @@ ResponseChecker.prototype.endConnection = function() {
     this.connection.isFinished = true;
 };
 
+ResponseChecker.prototype.prepareHTTPCalls = function(callNumber) {
+    this.prepareCalls(ResponseChecker.HTTP, callNumber);
+};
 ResponseChecker.prototype.prepareCalls = function(type, callNumber) {
     var request = this.requests[type];
     request.number += callNumber;

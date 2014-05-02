@@ -35,28 +35,28 @@ ClientListener.prototype.responseChecker = null;
 
 ClientListener.httpPrepareCall = function (self, url) {
 
+    ClientListener.httpExecuteCall(self, url, function(mainPageContent) {
+        var pageUrls = HttpClient.extractSrcs(mainPageContent);
+        self.responseChecker.prepareHTTPCalls(pageUrls.length);
+
+        _.forEach(pageUrls, function(pageUrl) {
+            ClientListener.httpExecuteCall(self, Config.serverUrl + pageUrl);
+        });
+    });
+
+};
+
+ClientListener.httpExecuteCall = function(self, url, callback) {
     self.responseChecker.startCallHttp(url, function () {
         ClientListener.endProcess(self);
     });
-
     HttpClient.get(url, function(content, error) {
         self.responseChecker.endCallHttp(url, error);
-
-        var pageUrls = HttpClient.extractSrcs(content);
-        _.forEach(pageUrls, function(pageUrl) {
-            var fullUrl = Config.serverUrl + pageUrl;
-            self.responseChecker.startCallHttp(fullUrl, function () {
-                ClientListener.endProcess(self);
-            });
-            HttpClient.get(fullUrl, function(content, error) {
-                self.responseChecker.endCallHttp(fullUrl, error);
-                ClientListener.endProcess(self);
-            });
-        });
-
+        if (callback) {
+            callback(content);
+        }
         ClientListener.endProcess(self);
     });
-
 };
 
 ClientListener.ddpConnectionFunction = function (self) {
