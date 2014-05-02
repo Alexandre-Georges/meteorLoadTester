@@ -1,7 +1,7 @@
 var http = require('http');
 
 var HTTP_CODE_SUCCESS = 200;
-var SRC_REGEXP = /src="(.*)"/g;
+var SRC_REGEXP = /src="(.*)"|href="(.*\.css.*)"/g;
 
 var HttpClient = function() {};
 HttpClient.get = function(path, callback) {
@@ -33,7 +33,12 @@ HttpClient.extractSrcs = function(content) {
     var srcs = [];
     var result;
     while(result = SRC_REGEXP.exec(content)) {
-        srcs.push(result[1]);
+        var index = 1;
+        var url;
+        while((url = result[index]) === undefined) {
+            index++;
+        }
+        srcs.push(url);
     }
     return srcs;
 };
