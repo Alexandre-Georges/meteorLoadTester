@@ -20,7 +20,7 @@ var ClientListener = function() {
     this.responseChecker.start();
     this.ddpClient = SockJS.create(Config.ddpUrl);
     this.ddpClient.on('connection', function() {
-        ClientListener.ddpConnectionFunction(self);
+        DDPClient.connect(self.ddpClient);
     });
     this.ddpClient.on('data', function(message) {
         ClientListener.ddpDataFunction(self, message);
@@ -59,22 +59,6 @@ ClientListener.httpExecuteCall = function(self, url, callback) {
     });
 };
 
-ClientListener.ddpConnectionFunction = function (self) {
-
-    DDPClient.connect(self.ddpClient);
-
-    ClientListener.ddpPrepareCall(self, function(name, id) {
-        self.responseChecker.startCallMethod(name, id, function () {
-            ClientListener.endProcess(self);
-        });
-    }, DDPClient.callMethod, Config.methods);
-    ClientListener.ddpPrepareCall(self, function(name, id) {
-        self.responseChecker.startCallSubscription(name, id, function () {
-            ClientListener.endProcess(self);
-        });
-    }, DDPClient.subscribe, Config.subscriptions);
-};
-
 ClientListener.ddpPrepareCall = function (self, responseCheckerFunction, ddpClientFunction, calls) {
     var totalIndex = 0;
     _.forEach(calls, function(call) {
@@ -105,6 +89,18 @@ ClientListener.ddpDataFunction = function (self, message) {
             return;
         } else if (response.msg === 'connected') {
             self.responseChecker.endConnection();
+
+            ClientListener.ddpPrepareCall(self, function(name, id) {
+                self.responseChecker.startCallMethod(name, id, function () {
+                    ClientListener.endProcess(self);
+                });
+            }, DDPClient.callMethod, Config.methods);
+            ClientListener.ddpPrepareCall(self, function(name, id) {
+                self.responseChecker.startCallSubscription(name, id, function () {
+                    ClientListener.endProcess(self);
+                });
+            }, DDPClient.subscribe, Config.subscriptions);
+
             ClientListener.endProcess(self);
             return;
         } else if (response.msg === 'ready') {
