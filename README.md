@@ -15,9 +15,8 @@ This phenomenon should also be visible if there are a huge number of calls, call
 
 ## Scenario configuration
  In utils/config.js multiple properties can be defined, let's take a quick look to them :
-
 * config.serverUrl : URL of your server, if you use Meteor defaults you do not need to change it
-* config.httpUrl : you may want to use a specific URL to reach your server
+* config.httpUrl : you may want to use a specific URL to reach your server, if you do not want to perform HTTP tests set this value to ```null```
 * config.ddpUrl : URL used for websocket requests
 * config.timeout : we wait for a server response during this time, once the timeout is reached we flag the call as timeout
 * config.ddpVersion : Meteor uses a custom 'protocol' called DDP, the version sometimes changes
@@ -26,9 +25,8 @@ This phenomenon should also be visible if there are a huge number of calls, call
 * config.methods : it follows the same scheme than the subscriptions for methods
 
 Subscriptions and methods have sub-properties to create a scenario :
-
 * name : name of the subscription or method
-* parameters : optional parameters (null if none)
+* parameters : optional parameters (```null``` if none)
 * callNumber : number of calls to perform
 * delayBetweenCalls : delay between each call
 * startDelay : when the 1st call should start
@@ -50,3 +48,13 @@ Dependencies are defined in packages.json.
 
 ## Launch
 Launch the load tester with the following command : ```./loadTest.sh```
+
+## Generated statistics
+Each agent has its own statistics and global statistics are also generated from the agents'. They include :
+* how many calls were made
+* how many errors were received
+* how many timeouts did we have
+* mean times (average response time) for each call type
+* standard deviation to check if response times are consistent
+
+Please note that if a call gets a timeout then the call response time will be equals to the timeout value.
