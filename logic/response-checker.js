@@ -161,46 +161,28 @@ ResponseChecker.prototype.display = function() {
     string += 'agent;' + Config.clientNumber;
     string += '\ntotal time;' + this.executionTime;
 
-    for(var index in https) {
-        var httpResult = https[index];
-        string += '\nhttp;' + index + ';';
-        string += 'calls;' + httpResult.executions.length + ';';
-        string += 'errors;' + httpResult.errors + ';';
-        string += 'timeouts;' + httpResult.timeouts + ';';
-        string += 'mean;' + (httpResult.totalTime / httpResult.executions.length);
-        string += '\nstarting date;time;error;timeout';
-        _.forEach(httpResult.executions, function(execution) {
-            string += '\n' + execution.startingDate.getTime() + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
-        });
-    };
-
-    for(var index in methods) {
-        var methodResult = methods[index];
-        string += '\nmethod;' + index + ';';
-        string += 'calls;' + methodResult.executions.length + ';';
-        string += 'errors;' + methodResult.errors + ';';
-        string += 'timeouts;' + methodResult.timeouts + ';';
-        string += 'mean;' + (methodResult.totalTime / methodResult.executions.length);
-        string += '\nstarting date;time;error;timeout';
-        _.forEach(methodResult.executions, function(execution) {
-            string += '\n' + execution.startingDate.getTime() + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
-        });
-    };
-
-    for(var index in subscriptions) {
-        var subscriptionResult = subscriptions[index];
-        string += '\nsubscription;' + index + ';';
-        string += 'calls;' + subscriptionResult.executions.length + ';';
-        string += 'errors;' + subscriptionResult.errors + ';';
-        string += 'timeouts;' + subscriptionResult.timeouts + ';';
-        string += 'mean;' + (subscriptionResult.totalTime / subscriptionResult.executions.length);
-        string += '\nstarting date;time;error;timeout';
-        _.forEach(subscriptionResult.executions, function(execution) {
-            string += '\n' + execution.startingDate.getTime() + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
-        });
-    };
+    string += ResponseChecker.displayType('http', https);
+    string += ResponseChecker.displayType('method', methods);
+    string += ResponseChecker.displayType('subscription', subscriptions);
 
     FileSystem.writeFile('agent' + Config.clientNumber + '.csv', string);
+};
+
+ResponseChecker.displayType = function (typeLabel, results) {
+    var string = '';
+    for(var index in results) {
+        var result = results[index];
+        string += '\n' + typeLabel + ';' + index + ';';
+        string += 'calls;' + result.executions.length + ';';
+        string += 'errors;' + result.errors + ';';
+        string += 'timeouts;' + result.timeouts + ';';
+        string += 'mean;' + (result.totalTime / result.executions.length);
+        string += '\nstarting date;time;error;timeout';
+        _.forEach(result.executions, function(execution) {
+            string += '\n' + execution.startingDate.getTime() + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
+        });
+    };
+    return string;
 };
 
 ResponseChecker.formatData = function(results) {
