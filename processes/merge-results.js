@@ -76,7 +76,9 @@ function readAgentResults(filesData) {
                     calls: columns[3],
                     errors: columns[5],
                     timeouts: columns[7],
-                    mean: columns[9]
+                    totalTime: columns[9],
+                    mean: columns[11],
+                    std: columns[13]
                 });
                 // skipping the header
                 index++;
@@ -108,85 +110,71 @@ function writeReport(result) {
     string += agentNumbersLine + '\n' + agentTotalTimeLine;
 
     string += '\n\nhttp';
-    for (var index in result.https) {
-        var http = result.https[index];
-        string += '\nurl;' + index;
-
-        var agentNumbersLine = 'agent number';
-        var agentCallsLine = 'calls';
-        var agentErrorsLine = 'errors';
-        var agentTimeoutsLine = 'timeouts';
-        var agentMeansLine = 'mean times';
-
-        _.forEach(http.agentData, function(agent) {
-            agentNumbersLine += ';' + agent.number;
-            agentCallsLine += ';' + agent.calls;
-            agentErrorsLine += ';' + agent.errors;
-            agentTimeoutsLine += ';' + agent.timeouts;
-            agentMeansLine += ';' + agent.mean;
-        });
-        string += '\n' + agentNumbersLine + '\n' + agentCallsLine + '\n' + agentErrorsLine + '\n' + agentTimeoutsLine + '\n' + agentMeansLine;
-
-        string += '\nagent number;starting date;execution time;error;timeout';
-        http.executions = _.sortBy(http.executions, function(execution) { return execution.startingDate; });
-        _.forEach(http.executions, function(execution) {
-            string += '\n' + execution.agentNumber + ';' + execution.startingDate + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
-        });
-    }
+    string += getTypeResult('url', result.https);
 
     string += '\n\nmethods';
-    for (var index in result.methods) {
-        var method = result.methods[index];
-        string += '\nmethod name;' + index;
-
-        var agentNumbersLine = 'agent number';
-        var agentCallsLine = 'calls';
-        var agentErrorsLine = 'errors';
-        var agentTimeoutsLine = 'timeouts';
-        var agentMeansLine = 'mean times';
-
-        _.forEach(method.agentData, function(agent) {
-            agentNumbersLine += ';' + agent.number;
-            agentCallsLine += ';' + agent.calls;
-            agentErrorsLine += ';' + agent.errors;
-            agentTimeoutsLine += ';' + agent.timeouts;
-            agentMeansLine += ';' + agent.mean;
-        });
-        string += '\n' + agentNumbersLine + '\n' + agentCallsLine + '\n' + agentErrorsLine + '\n' + agentTimeoutsLine + '\n' + agentMeansLine;
-
-        string += '\nagent number;starting date;execution time;error;timeout';
-        method.executions = _.sortBy(method.executions, function(execution) { return execution.startingDate; });
-        _.forEach(method.executions, function(execution) {
-            string += '\n' + execution.agentNumber + ';' + execution.startingDate + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
-        });
-    }
+    string += getTypeResult('method name', result.methods);
 
     string += '\n\nsubscriptions';
-    for (var index in result.subscriptions) {
-        var subscription = result.subscriptions[index];
-        string += '\nsubscription name;' + index;
+    string += getTypeResult('subscription name', result.subscriptions);
+
+    FileSystem.writeFile('results.csv', string);
+};
+
+function getTypeResult(typeName, results) {
+    var string = '';
+    for (var index in results) {
+        var result = results[index];
+        string += '\n' + typeName + ';' + index;
 
         var agentNumbersLine = 'agent number';
         var agentCallsLine = 'calls';
         var agentErrorsLine = 'errors';
         var agentTimeoutsLine = 'timeouts';
+        var agentTotalsLine = 'total times';
         var agentMeansLine = 'mean times';
+        var agentStdsLine = 'stds times';
 
-        _.forEach(subscription.agentData, function(agent) {
+        var executionNumber = result.executions.length;
+        var totalErrors = 0;
+        var totalTimeouts = 0;
+        var totalTime = 0;
+
+        _.forEach(result.agentData, function(agent) {
+            totalErrors += parseInt(agent.errors);
+            totalTimeouts += parseInt(agent.timeouts);
+            totalTime += parseInt(agent.totalTime);
             agentNumbersLine += ';' + agent.number;
             agentCallsLine += ';' + agent.calls;
             agentErrorsLine += ';' + agent.errors;
             agentTimeoutsLine += ';' + agent.timeouts;
+            agentTotalsLine += ';' + agent.totalTime;
             agentMeansLine += ';' + agent.mean;
+            agentStdsLine += ';' + agent.std;
         });
-        string += '\n' + agentNumbersLine + '\n' + agentCallsLine + '\n' + agentErrorsLine + '\n' + agentTimeoutsLine + '\n' + agentMeansLine;
+        string += '\n' + agentNumbersLine + '\n' + agentCallsLine + '\n' + agentErrorsLine + '\n' + agentTimeoutsLine + '\n' + agentTotalsLine + '\n' + agentMeansLine + '\n' + agentStdsLine + '\n';
+
+        var mean = totalTime / executionNumber;
+
+        string += 'calls;' + executionNumber + ';';
+        string += 'errors;' + totalErrors + ';';
+        string += 'timeouts;' + totalTimeouts + ';';
+        string += 'total time;' + totalTime + ';';
+        string += 'mean;' + Math.round(mean * 100) / 100 + ';';
+
+        var std = 0;
+        var executionString = '';
+        result.executions = _.sortBy(result.executions, function(execution) { return execution.startingDate; });
+        _.forEach(result.executions, function(execution) {
+            std += Math.pow(execution.executionTime - mean, 2);
+            executionString += '\n' + execution.agentNumber + ';' + execution.startingDate + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
+        });
+
+        std = Math.sqrt(std / executionNumber);
+        string += 'std;' + Math.round(std * 100) / 100;
 
         string += '\nagent number;starting date;execution time;error;timeout';
-        subscription.executions = _.sortBy(subscription.executions, function(execution) { return execution.startingDate; });
-        _.forEach(subscription.executions, function(execution) {
-            string += '\n' + execution.agentNumber + ';' + execution.startingDate + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
-        });
+        string += executionString;
     }
-
-    FileSystem.writeFile('results.csv', string);
+    return string;
 };
