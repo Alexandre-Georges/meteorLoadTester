@@ -172,15 +172,24 @@ ResponseChecker.displayType = function (typeLabel, results) {
     var string = '';
     for(var index in results) {
         var result = results[index];
+        var executionNumber = result.executions.length;
+        var mean = result.totalTime / executionNumber;
         string += '\n' + typeLabel + ';' + index + ';';
-        string += 'calls;' + result.executions.length + ';';
+        string += 'calls;' + executionNumber + ';';
         string += 'errors;' + result.errors + ';';
         string += 'timeouts;' + result.timeouts + ';';
-        string += 'mean;' + (result.totalTime / result.executions.length);
-        string += '\nstarting date;time;error;timeout';
+        string += 'total time;' + result.totalTime + ';';
+        string += 'mean;' + Math.round(mean * 100) / 100 + ';';
+        var std = 0;
+        var executionString = '';
         _.forEach(result.executions, function(execution) {
-            string += '\n' + execution.startingDate.getTime() + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
+            std += Math.pow(execution.executionTime - mean, 2);
+            executionString += '\n' + execution.startingDate.getTime() + ';' + execution.executionTime + ';' + execution.isError + ';' + execution.isTimeout;
         });
+        std = Math.sqrt(std / executionNumber);
+        string += 'std;' + Math.round(std * 100) / 100;
+        string += '\nstarting date;time;error;timeout';
+        string += executionString;
     };
     return string;
 };
