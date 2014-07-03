@@ -2,7 +2,7 @@ var CONFIG = require('./config');
 
 DDPClient = function() {};
 DDPClient.connect = function(client) {
-    client.write('{\"msg\":\"connect\", \"version\":\"' + CONFIG.ddpVersion + '\"}');
+    client.write('{\"msg\":\"connect\", \"version\":\"' + CONFIG.ddpVersion + '\", \"support\":[\"' + CONFIG.ddpVersion + '\"]}');
 };
 DDPClient.callMethod = function(client, name, id, parameters) {
     var parametersString = '';
